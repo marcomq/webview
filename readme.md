@@ -5,6 +5,11 @@ excellent cross-platform single header webview
 library for C/C++ using Gtk, Cocoa or MSHTML
 repectively.
 
+Preview generated nimterop wrapper with:
+```
+nim r -f -d:printWrapper webview.nim
+```
+
 # Docs
 
 Documentation is [here](http://htmlpreview.github.io/?https://github.com/oskca/webview/blob/master/docs/webview.html)
