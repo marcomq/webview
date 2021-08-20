@@ -1,5 +1,5 @@
 import nimterop/[build, cimport]
-import strutils, regex
+import strutils, regex, os
 
 when defined(linux):
   discard
@@ -18,7 +18,7 @@ static:
     cDebug()                                                # Print wrapper to stdout
 
 const
-  baseDir = getProjectCacheDir("webview_new")             # Download library within nimcache
+  baseDir = currentSourcePath/../""/../"webview"
 
 # getHeader(
 #   "webview.h",                                             # The header file to wrap, full path is returned in `headerPath`
@@ -28,9 +28,6 @@ const
 #   # cmakeFlags = "-DENABLE_STATIC_LIB=ON"                   # Flags to pass to Cmake
 #   # altNames = "hdr"                                        # Alterate names of the library binary, full path returned in `headerLPath`
 # )
-static:
-  discard staticExec "git clone https://github.com/webview/webview.git " & baseDir
-  discard staticExec "cd " & baseDir & " && " & "git checkout master"
 
 # Wrap headerPath as returned from getHeader() and link statically
 # or dynamically depending on user input
