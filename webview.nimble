@@ -14,7 +14,7 @@ task test, "a simple test case":
     exec "nim c -r tests/bindEx.nim"
 
 task docs, "generate doc":
-    exec "nim doc2 -o:docs/webview.html webview.nim"
+    exec "nim doc --project --index:on --git.url:https://github.com/oskca/webview --git.commit:master --outdir:htmldocs webview.nim"
 
 task sync, "update webview.h":
     exec "wget -O webview/webview.h https://raw.githubusercontent.com/zserge/webview/master/webview.h"

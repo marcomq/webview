@@ -28,10 +28,10 @@ proc exit*(w: Webview) =
 proc set_size*(w: Webview; width: int; height: int; hint: WindowSizeHint) =
   ## Updates native window size.
   ## Available hints:
-  ##   WindowSizeHint.None - Width and height are default size
-  ##   WindowSizeHint.Min - Width and height are minimum bounds
-  ##   WindowSizeHint.Max - Width and height are maximum bounds
-  ##   WindowSizeHint.Fixed - Window size can not be changed by a user
+  ##   - WindowSizeHint.None - Width and height are default size
+  ##   - WindowSizeHint.Min - Width and height are minimum bounds
+  ##   - WindowSizeHint.Max - Width and height are maximum bounds
+  ##   - WindowSizeHint.Fixed - Window size can not be changed by a user
   set_size(w, width.cint, height.cint, hint.cint)
 
 proc newWebView*(title="WebView", url="", 
