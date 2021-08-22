@@ -1,3 +1,6 @@
+discard """
+  action: "compile"
+"""
 import webview
 import strutils 
 import os
@@ -30,19 +33,19 @@ const indexHTML = """
 let fn="$1/xxx.html"%[getTempDir()]
 writeFile(fn, indexHTML)
 var w = newWebView("Simple window demo2", "file://" & fn)
-var fullScreen = true
-w.bindProcs("api"):
-    proc open() = echo w.dialogOpen()
-    proc save() = echo w.dialogSave()
-    proc opendir() = echo w.dialogOpen(flag=dFlagDir)
-    proc message() = w.msg("hello", "message")
-    proc info() = w.info("hello", "info")
-    proc warn() = w.warn("hello", "warn")
-    proc error() = w.error("hello", "error")
+# var fullScreen = true
+w.bindProcs:
+    # proc open() = echo w.dialogOpen()
+    # proc save() = echo w.dialogSave()
+    # proc opendir() = echo w.dialogOpen(flag=dFlagDir)
+    # proc message() = w.msg("hello", "message")
+    # proc info() = w.info("hello", "info")
+    # proc warn() = w.warn("hello", "warn")
+    # proc error() = w.error("hello", "error")
     proc changeTitle(title: string) = w.setTitle(title)
-    proc close() = w.terminate()
-    proc changeColor() = w.setColor(210,210,210,100)
-    proc toggleFullScreen() = fullScreen = not w.setFullscreen(fullScreen)
+    # proc close() = w.terminate()
+    # proc changeColor() = w.setColor(210,210,210,100)
+    # proc toggleFullScreen() = fullScreen = not w.setFullscreen(fullScreen)
 
 # w.setFullscreen()
 w.run()

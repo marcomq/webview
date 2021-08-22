@@ -1,56 +1,49 @@
-import json, std/jsonutils, macros, tables, strutils, strformat, sequtils, random
+import json, std/jsonutils, macros, tables, strformat
 import header
 
-# export header
-
-proc randomString(): string =
-  randomize()
-  const lowerCaseAscii = 97..122
-  32.newSeqWith(lowerCaseAscii.rand.char).join
-
 type 
-  # Webview* = pointer
+  WebviewSizeCHint* = enum
+    WEBVIEW_HINT_NONE, WEBVIEW_HINT_MIN, WEBVIEW_HINT_MAX, WEBVIEW_HINT_FIXED
   WindowSizeHint* {.pure.} = enum 
     None = WEBVIEW_HINT_NONE
     Min = WEBVIEW_HINT_MIN
     Max = WEBVIEW_HINT_MAX
     Fixed = WEBVIEW_HINT_FIXED
 
-proc newWebView*(debug: bool, window: Webview): Webview =
+proc createWebView*(debug: bool=false, window: Webview = nil): Webview =
   create(debug.cint, window)
-
-proc newWebView*(debug: bool): Webview =
-  create(debug.cint, nil)
 
 proc exit*(w: Webview) =
   w.destroy()
 
-proc set_size*(w: Webview; width: int; height: int; hint: WindowSizeHint) =
+proc setSize*(w: Webview, width: int, height: int, hint: WindowSizeHint = None) =
   ## Updates native window size.
   ## Available hints:
-  ##   - WindowSizeHint.None - Width and height are default size
-  ##   - WindowSizeHint.Min - Width and height are minimum bounds
-  ##   - WindowSizeHint.Max - Width and height are maximum bounds
-  ##   - WindowSizeHint.Fixed - Window size can not be changed by a user
+  ##   WindowSizeHint.None - Width and height are default size
+  ##   WindowSizeHint.Min - Width and height are minimum bounds
+  ##   WindowSizeHint.Max - Width and height are maximum bounds
+  ##   WindowSizeHint.Fixed - Window size can not be changed by a user
   set_size(w, width.cint, height.cint, hint.cint)
 
 proc newWebView*(title="WebView", url="", 
                 width=640, height=480, 
                 resizable=true, debug=false,
                 cb: pointer = nil): Webview =
-  result = newWebView(debug)
+  result = createWebView(debug)
   result.set_title(title)
   result.navigate(url)
   let hint = if resizable: WindowSizeHint.None
     else: WindowSizeHint.Fixed
-  result.set_size(width = width, height = height, hint = hint)
+  result.setSize(width = width, height = height, hint = hint)
   assert cb == nil, "Not implemented"
 
 type
-  ProcA1R = proc(req: JsonNode): JsonNode
-  ArgTuple = tuple[w: Webview, p: ProcA1R]
+  JsonProc = proc(req: JsonNode): JsonNode
+  ProcArgs = object
+    w*: Webview
+    p*: JsonProc
 
-var dispatchTable = newTable[int, ArgTuple]()
+var dispatchTable = newTable[int, ProcArgs]()
 
 proc wrapProc(seq: cstring, req: cstring, arg: pointer) {.cdecl.} =
   var argUnref = dispatchTable[cast[int](arg)]
@@ -59,7 +52,7 @@ proc wrapProc(seq: cstring, req: cstring, arg: pointer) {.cdecl.} =
     p = argUnref.p
   try:
     let output = $ p(parseJson($req))
-    w.`return`(seq, 0.cint, output.cstring)
+    w.returnCb(seq, 0.cint, output.cstring)
   except:
     let
       e = getCurrentException()
@@ -68,12 +61,12 @@ proc wrapProc(seq: cstring, req: cstring, arg: pointer) {.cdecl.} =
         fmt"""Exception "{e.name}" occured: {msg}""" & "\n" &
         fmt"Stacktrace: {e.getStacktrace()}"
       )
-    w.`return`(seq, 1.cint, jsonMsg.cstring)
+    w.returnCb(seq, 1.cint, jsonMsg.cstring)
 
-proc bindProc*(w: Webview, name: string, p: ProcA1R) =
+proc bindProc*(w: Webview, name: string, p: JsonProc) =
   let i = dispatchTable.len() + 1
-  dispatchTable[i] = (w, p)
-  w.`bind`(name, wrapProc, cast[pointer](i))
+  dispatchTable[i] = ProcArgs(w:w, p:p)
+  w.bindCb(name, wrapProc, cast[pointer](i))
 
 proc bindProc*(w: Webview, name: string, p: proc(req: JsonNode)) =
   proc wrap(req: JsonNode): JsonNode =
@@ -83,7 +76,7 @@ proc bindProc*(w: Webview, name: string, p: proc(req: JsonNode)) =
 
 proc bindProc*(w: Webview, name: string, p: proc(): JsonNode) =
   proc wrap(req: JsonNode): JsonNode =
-    return p()
+    p()
   bindProc(w, name, wrap)
 
 proc bindProc*(w: Webview, name: string, p: proc()) =
@@ -94,12 +87,12 @@ proc bindProc*(w: Webview, name: string, p: proc()) =
 
 proc bindProc*[A1,R](w: Webview, name: string, p: proc(arg1: A1): R) =
   proc wrap(arg1: JsonNode): JsonNode =
-    return p(arg1[0].jsonTo(A1)).toJson()
+    p(arg1[0].jsonTo(A1)).toJson()
   bindProc(w, name, wrap)
 
 proc bindProc*[R](w: Webview, name: string, p: proc(): R) =
   proc wrap(): JsonNode =
-    return p().toJson()
+    p().toJson()
   bindProc(w, name, wrap)
 
 proc bindProc*[A1](w: Webview, name: string, p: proc(arg1: A1)) =
@@ -108,7 +101,12 @@ proc bindProc*[A1](w: Webview, name: string, p: proc(arg1: A1)) =
   bindProc(w, name, wrap)
 
 
-# proc bindProc*(w: Webview; scope, name: string; p: ProcA1R) =
+# proc randomString(): string =
+#   randomize()
+#   const lowerCaseAscii = 97..122
+#   32.newSeqWith(lowerCaseAscii.rand.char).join
+
+# proc bindProc*(w: Webview; scope, name: string; p: JsonProc) =
 #   let newName = randomString()
 #   echo newName
 #   bindProc(w, newName, p)
@@ -171,13 +169,16 @@ macro bindProcs*(w: Webview, n: untyped): untyped =
 
 
 when isMainModule:
-  let w = newWebView(true)
+  let w = createWebView(true)
   w.set_title("Minimal example")
   w.set_size(480, 320, WindowSizeHint.None)
   w.navigate("")
 
   let a = "asdasdasd"
-  w.`bind`("test123", proc(seq: cstring, req: cstring, arg: pointer) {.cdecl.} = w.`return`(seq, 0.cint, cstring("{0: \"Success?" & $seq & $req & "\"}")), cast[pointer](a.unsafeAddr))
+  w.bindCb("test123", 
+            proc(seq: ccstring, req: ccstring, arg: pointer) {.cdecl.} = 
+              w.returnCb(seq, 0.cint, cstring("{0: \"Success?" & $seq & $req & "\"}")), 
+            cast[pointer](a.unsafeAddr))
 
   proc test(a: JsonNode): JsonNode =
     assert a[0].getStr() != "error"

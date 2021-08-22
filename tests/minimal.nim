@@ -1,3 +1,8 @@
+discard """
+  action: "compile"
+"""
 import webview
 
-open("Minimal webview example", "https://www.bing.com")
+let w = newWebView(title="Minimal example", url="https://www.bing.com", 
+    width=480, height=320, resizable=true)
+w.run()

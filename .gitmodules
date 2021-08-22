@@ -1,4 +1,0 @@
-[submodule "webview"]
-	path = webview
-	url = https://github.com/webview/webview.git
-	ignore = dirty
